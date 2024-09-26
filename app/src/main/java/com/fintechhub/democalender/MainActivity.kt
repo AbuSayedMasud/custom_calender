@@ -2,6 +2,7 @@ package com.fintechhub.democalender
 
 import android.annotation.SuppressLint
 import android.app.Fragment
+import android.app.TimePickerDialog
 import android.os.Bundle
 import android.util.Log
 import android.widget.DatePicker
@@ -19,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +34,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import com.fintechhub.democalender.ui.theme.DemoCalenderTheme
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -71,7 +76,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalPagerApi::class)
+@SuppressLint("DefaultLocale")
+@OptIn(ExperimentalPagerApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarWithEvents(events: MutableList<Event>) {
     // MutableState for current month
@@ -79,7 +85,9 @@ fun CalendarWithEvents(events: MutableList<Event>) {
     // MutableState for selected date events
     val selectedDateEvents = remember { mutableStateOf<List<Event>>(listOf()) }
     var showDialog by remember { mutableStateOf(false) }
-
+    var showTimePicker by remember { mutableStateOf(false) }
+    var setData by remember { mutableStateOf("") }
+    val state = rememberTimePickerState()
     // Pager state to handle page changes
     val pagerState = rememberPagerState(initialPage = Int.MAX_VALUE / 2)
 
@@ -93,15 +101,38 @@ fun CalendarWithEvents(events: MutableList<Event>) {
         Button(onClick = { showDialog = true }) {
             Text("Create Event")
         }
+        Button(onClick = { showTimePicker = true }) {
+            Text("Time Event")
+        }
+        setData.let { state ->
+            Text(
+                text = "Selected Time: $setData",
+                modifier = Modifier.padding(top = 16.dp)
+            )
+        }
 
+        if (showTimePicker) {
+            TimePickerDialog(
+                onCancel = { showTimePicker = false },
+                onConfirm = {
+                    val cal = Calendar.getInstance()
+                    cal.set(Calendar.HOUR_OF_DAY, state.hour)
+                    cal.set(Calendar.MINUTE, state.minute)
+                    cal.isLenient = false
+                    setData = String.format("%02d:%02d", state.hour, state.minute)
+                    showTimePicker = false
+                },
+            ) {
+                TimePicker(state = state)
+            }
+        }
         Spacer(modifier = Modifier.height(60.dp))
 
-        // Show dialog when the button is clicked
         if (showDialog) {
             CreateEventDialog(
                 onCreate = { newEvent ->
-                    events.add(newEvent) // Add new event to the events list
-                    showDialog = false // Close the dialog after creating an event
+                    events.add(newEvent)
+                    showDialog = false
                 },
                 onDismiss = { showDialog = false }
             )
@@ -399,3 +430,58 @@ fun CreateEventDialog(onCreate: (Event) -> Unit, onDismiss: () -> Unit) {
 
 }
 
+@Composable
+fun TimePickerDialog(
+    title: String = "Select Time",
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+    toggle: @Composable () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        ),
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .width(IntrinsicSize.Min)
+                .height(IntrinsicSize.Min)
+                .background(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surface
+                ),
+        ) {
+            toggle()
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium
+                )
+                content()
+                Row(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(
+                        onClick = onCancel
+                    ) { Text("Cancel") }
+                    TextButton(
+                        onClick = onConfirm
+                    ) { Text("OK") }
+                }
+            }
+        }
+    }
+}
