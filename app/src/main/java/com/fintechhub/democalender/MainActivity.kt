@@ -1,5 +1,6 @@
 package com.fintechhub.democalender
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Fragment
 import android.app.TimePickerDialog
@@ -9,17 +10,22 @@ import android.widget.DatePicker
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -27,13 +33,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
@@ -49,6 +61,7 @@ import java.util.*
 
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,19 +69,89 @@ class MainActivity : ComponentActivity() {
         setContent {
             val sampleEvents = remember {
                 mutableStateListOf(
-                    Event(1, "Event 1", Calendar.getInstance().apply { set(2024, 8, 20) }.time),
-                    Event(2, "Event 2", Calendar.getInstance().apply { set(2024, 8, 25) }.time),
-                    Event(3, "Event 3", Calendar.getInstance().apply { set(2024, 8, 26) }.time),
-                    Event(4, "Event 4", Calendar.getInstance().apply { set(2024, 8, 26) }.time),
-                    Event(5, "Event 5", Calendar.getInstance().apply { set(2024, 9, 26) }.time)
+                    Event(
+                        1,
+                        "Event 1",
+                        "this is ",
+                        Calendar.getInstance().apply { set(2024, 8, 20) }.time,
+                        false,
+                        "10:20",
+                        "22:23"
+                    ),
+                    Event(
+                        2,
+                        "Event 2",
+                        "this is ",
+                        Calendar.getInstance().apply { set(2024, 10, 20) }.time,
+                        false,
+                        "10:20",
+                        "22:23"
+                    ),
+                    Event(
+                        3,
+                        "Event 3",
+                        "this is ",
+                        Calendar.getInstance().apply { set(2024, 8, 20) }.time,
+                        false,
+                        "10:20",
+                        "22:23"
+                    ),
+                    Event(
+                        4,
+                        "Event 4",
+                        "this is ",
+                        Calendar.getInstance().apply { set(2024, 10, 25) }.time,
+                        false,
+                        "10:20",
+                        "22:23"
+                    ),
+                    Event(
+                        5,
+                        "Event 5",
+                        "this is ",
+                        Calendar.getInstance().apply { set(2024, 8, 30) }.time,
+                        false,
+                        "10:20",
+                        "22:23"
+                    ),
                 )
             }
+            var showDialog by remember { mutableStateOf(false) }
+            if (showDialog) {
+                CreateEventDialog(onCreate = { newEvent ->
+                    sampleEvents.add(newEvent)
+                    showDialog = false
+                }, onDismiss = { showDialog = false })
+            }
             DemoCalenderTheme {
-                Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 40.dp)
-                ) {
+                Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
+                    TopAppBar(colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White,
+                        actionIconContentColor = Color.Black,
+                        navigationIconContentColor = Color.Black,
+                        scrolledContainerColor = Color.White,
+                        titleContentColor = Color.Black
+                    ), title = {
+                        Text(
+                            "Celender",
+                            color = Color.Black,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }, actions = {
+                        IconButton(onClick = { showDialog = true }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_addchart_24),
+                                contentDescription = "Back",
+                                tint = Color(0xff2c87d9)
+                            )
+                        }
+                    }, navigationIcon = {
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    })
+                }) {
                     CalendarWithEvents(events = sampleEvents)
                 }
             }
@@ -84,10 +167,6 @@ fun CalendarWithEvents(events: MutableList<Event>) {
     val currentMonth = remember { mutableStateOf(Calendar.getInstance()) }
     // MutableState for selected date events
     val selectedDateEvents = remember { mutableStateOf<List<Event>>(listOf()) }
-    var showDialog by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
-    var setData by remember { mutableStateOf("") }
-    val state = rememberTimePickerState()
     // Pager state to handle page changes
     val pagerState = rememberPagerState(initialPage = Int.MAX_VALUE / 2)
 
@@ -95,49 +174,8 @@ fun CalendarWithEvents(events: MutableList<Event>) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 60.dp)
     ) {
-        // Button to create an event
-        Button(onClick = { showDialog = true }) {
-            Text("Create Event")
-        }
-        Button(onClick = { showTimePicker = true }) {
-            Text("Time Event")
-        }
-        setData.let { state ->
-            Text(
-                text = "Selected Time: $setData",
-                modifier = Modifier.padding(top = 16.dp)
-            )
-        }
-
-        if (showTimePicker) {
-            TimePickerDialog(
-                onCancel = { showTimePicker = false },
-                onConfirm = {
-                    val cal = Calendar.getInstance()
-                    cal.set(Calendar.HOUR_OF_DAY, state.hour)
-                    cal.set(Calendar.MINUTE, state.minute)
-                    cal.isLenient = false
-                    setData = String.format("%02d:%02d", state.hour, state.minute)
-                    showTimePicker = false
-                },
-            ) {
-                TimePicker(state = state)
-            }
-        }
-        Spacer(modifier = Modifier.height(60.dp))
-
-        if (showDialog) {
-            CreateEventDialog(
-                onCreate = { newEvent ->
-                    events.add(newEvent)
-                    showDialog = false
-                },
-                onDismiss = { showDialog = false }
-            )
-        }
-
         HorizontalPager(
             count = Int.MAX_VALUE,
             modifier = Modifier.fillMaxSize(),
@@ -221,9 +259,7 @@ fun CalendarImage(calendar: Calendar) {
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun CalendarControls(
-    pagerState: PagerState,
-    month: Calendar,
-    selectedDateEvents: MutableState<List<Event>>
+    pagerState: PagerState, month: Calendar, selectedDateEvents: MutableState<List<Event>>
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -248,9 +284,7 @@ fun CalendarControls(
         Text(
             text = "${
                 month.getDisplayName(
-                    Calendar.MONTH,
-                    Calendar.LONG,
-                    Locale.getDefault()
+                    Calendar.MONTH, Calendar.LONG, Locale.getDefault()
                 )
             } ${month.get(Calendar.YEAR)}",
             style = MaterialTheme.typography.bodySmall,
@@ -270,9 +304,7 @@ fun CalendarControls(
 
 @Composable
 fun CalendarGrid(
-    events: List<Event>,
-    currentMonth: Calendar,
-    selectedDateEvents: MutableState<List<Event>>
+    events: List<Event>, currentMonth: Calendar, selectedDateEvents: MutableState<List<Event>>
 ) {
     val daysInMonth = currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH)
     val firstDayOfMonth = currentMonth.clone() as Calendar
@@ -309,14 +341,13 @@ fun CalendarGrid(
                 ) && currentMonth.get(Calendar.YEAR) == today.get(Calendar.YEAR)
 
             // Use Box to center content and set size for circular shape
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable {
-                        selectedDateEvents.value = eventsForDay
-                    }
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isToday) Color.Blue else Color.Transparent),
+            Box(modifier = Modifier
+                .size(40.dp)
+                .clickable {
+                    selectedDateEvents.value = eventsForDay
+                }
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (isToday) Color.Blue else Color.Transparent),
                 contentAlignment = Alignment.Center // Center content within Box
             ) {
                 Column(
@@ -329,9 +360,7 @@ fun CalendarGrid(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
-                        text = eventDots,
-                        color = Color.Red,
-                        modifier = Modifier.offset(y = -8.dp)
+                        text = eventDots, color = Color.Red, modifier = Modifier.offset(y = -8.dp)
                     )
                 }
             }
@@ -353,26 +382,56 @@ fun EventList(events: List<Event>) {
     }
 }
 
-// Preview Function
-@Preview(showBackground = true)
-@Composable
-fun PreviewCalendar() {
-    DemoCalenderTheme {
-        CalendarWithEvents(events = mutableListOf())
-    }
-}
-
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventDialog(onCreate: (Event) -> Unit, onDismiss: () -> Unit) {
     var eventTitle by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf(Date()) }
-
+    var eventDescriptor by remember { mutableStateOf("") }
+    var selectedCalenderData by remember { mutableStateOf(Date()) }
+    var selectData by remember { mutableStateOf<String?>(null) }
+    var startTime by remember { mutableStateOf<String?>(null) }
+    var endTime by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-
-    // Function to show DatePickerDialog
+    val dateFormat = SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault())
+    var checked by remember { mutableStateOf(false) }
+    val gradient = Brush.linearGradient(
+        colors = listOf(Color(0xff40A0F5), Color(0xff085BA6))
+    )
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+    val state = rememberTimePickerState()
+    if (showStartTimePicker) {
+        TimePickerDialog(
+            onCancel = { showStartTimePicker = false },
+            onConfirm = {
+                val cal = Calendar.getInstance()
+                cal.set(Calendar.HOUR_OF_DAY, state.hour)
+                cal.set(Calendar.MINUTE, state.minute)
+                cal.isLenient = false
+                startTime = String.format("%02d:%02d", state.hour, state.minute)
+                showStartTimePicker = false
+            },
+        ) {
+            TimePicker(state = state)
+        }
+    }
+    if (showEndTimePicker) {
+        TimePickerDialog(
+            onCancel = { showEndTimePicker = false },
+            onConfirm = {
+                val cal = Calendar.getInstance()
+                cal.set(Calendar.HOUR_OF_DAY, state.hour)
+                cal.set(Calendar.MINUTE, state.minute)
+                cal.isLenient = false
+                endTime = String.format("%02d:%02d", state.hour, state.minute)
+                showEndTimePicker = false
+            },
+        ) {
+            TimePicker(state = state)
+        }
+    }
     fun showDatePicker() {
         val datePickerDialog = android.app.DatePickerDialog(
             context,
@@ -381,7 +440,9 @@ fun CreateEventDialog(onCreate: (Event) -> Unit, onDismiss: () -> Unit) {
                 calendar.set(Calendar.YEAR, year)
                 calendar.set(Calendar.MONTH, month)
                 calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                selectedDate = calendar.time
+                selectedCalenderData = calendar.time
+                // Format the selected date as "dd-MMM-yyyy"
+                selectData = dateFormat.format(selectedCalenderData)
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -391,41 +452,357 @@ fun CreateEventDialog(onCreate: (Event) -> Unit, onDismiss: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Event") },
+        containerColor = Color.White,
         text = {
             Column {
-                TextField(
-                    value = eventTitle,
-                    onValueChange = { eventTitle = it },
-                    label = { Text("Event Title") }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                //event name
+                Row(
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Column {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xfffafafa),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .fillMaxWidth(),
+                            border = BorderStroke(1.dp, Color(0xffb5b5b5))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp)
 
-                // Date display and picker button
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Selected Date: ${dateFormat.format(selectedDate)}")
+                            ) {
+                                TextField(
+                                    value = eventTitle,
+                                    onValueChange = { newText ->
+                                        eventTitle = newText
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color.Transparent),
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Ascii
+                                    ),
+                                    textStyle = TextStyle(
+                                        fontSize = 16.sp
+                                    ),
+                                    placeholder = {
+                                        Text(
+                                            text = "Event Name*",
+                                            color = Color(0xff565353),
+                                            fontSize = 16.sp,
+                                        )
+                                    },
+                                    colors = TextFieldDefaults.textFieldColors(
+                                        containerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent,
+                                        errorIndicatorColor = Color.Transparent
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                //description box
+                Row(
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xfffafafa),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .fillMaxWidth(),
+                            border = BorderStroke(1.dp, Color(0xffb5b5b5))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp)
+
+                            ) {
+                                TextField(
+                                    value = eventDescriptor,
+                                    onValueChange = { newText ->
+                                        eventDescriptor = newText
+                                    },
+                                    singleLine = false,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(80.dp)
+                                        .background(Color.Transparent),
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Ascii
+                                    ),
+                                    textStyle = TextStyle(
+                                        fontSize = 16.sp
+                                    ),
+
+                                    placeholder = {
+                                        Text(
+                                            text = "Type the note here ...",
+                                            color = Color(0xff565353),
+                                            fontSize = 16.sp,
+                                            textAlign = TextAlign.Start
+                                        )
+                                    },
+                                    colors = TextFieldDefaults.textFieldColors(
+                                        containerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent,
+                                        errorIndicatorColor = Color.Transparent
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                // calender book
+                Row(
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xfffafafa),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .fillMaxWidth(),
+                            border = BorderStroke(1.dp, Color(0xffb5b5b5))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(
+                                    start = 14.dp, top = 10.dp, bottom = 10.dp, end = 10.dp
+                                ),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = selectData ?: "Date",
+                                    fontSize = 16.sp,
+                                    color = Color(0xff565353),
+                                    modifier = Modifier
+                                        .weight(3f)
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Surface(
+                                    color = Color(0xfff5f5f5),
+                                    shape = RoundedCornerShape(10.dp),
+                                    shadowElevation = 0.dp,
+                                    modifier = Modifier
+                                        .weight(.8f)
+                                        .fillMaxWidth()
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(8.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.baseline_calendar_month_24),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(25.dp)
+                                                .align(Alignment.CenterVertically)
+                                                .weight(1f)
+                                                .clickable { showDatePicker() },
+                                            tint = Color(0xff2c87d9)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                //reminder
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, end = 10.dp)
+                ) {
+                    Text(
+                        text = "Reminds me",
+                        fontSize = 16.sp,
+                        color = Color(0xff565353),
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+
+                    Switch(checked = checked, onCheckedChange = {
+                        checked = it
+                    }, thumbContent = if (checked) {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                tint = Color.White,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                            )
+                        }
+                    } else {
+                        null
+                    }, colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ), modifier = Modifier.align(Alignment.CenterVertically))
+                }
+                //time frame
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xfffafafa),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .fillMaxWidth(),
+                            border = BorderStroke(1.dp, Color(0xffb5b5b5))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(
+                                    start = 14.dp, top = 16.dp, bottom = 16.dp, end = 10.dp
+                                ),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = startTime ?: "Start time",
+                                    fontSize = 16.sp,
+                                    maxLines = 1,
+                                    color = Color(0xff565353),
+                                    modifier = Modifier
+                                        .weight(3f)
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Icon(
+                                    painter = painterResource(R.drawable.baseline_access_time_24),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(25.dp)
+                                        .align(Alignment.CenterVertically)
+                                        .weight(1f)
+                                        .clickable { showStartTimePicker = true },
+                                    tint = Color(0xff2c87d9)
+                                )
+
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { showDatePicker() }) {
-                        Text("Select Date")
+                    Column(modifier = Modifier.weight(1f)) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xfffafafa),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .fillMaxWidth(),
+                            border = BorderStroke(1.dp, Color(0xffb5b5b5))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(
+                                    start = 14.dp, top = 16.dp, bottom = 16.dp, end = 10.dp
+                                ),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = endTime ?: "End time",
+                                    fontSize = 16.sp,
+                                    color = Color(0xff565353),
+                                    maxLines = 1,
+                                    modifier = Modifier
+                                        .weight(3f)
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Icon(
+                                    painter = painterResource(R.drawable.baseline_access_time_24),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(25.dp)
+                                        .align(Alignment.CenterVertically)
+                                        .weight(1f)
+                                        .clickable { showEndTimePicker = true },
+                                    tint = Color(0xff2c87d9)
+                                )
+
+                            }
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val newEvent = Event(System.currentTimeMillis(), eventTitle, selectedDate)
-                    onCreate(newEvent)
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(brush = gradient, shape = RoundedCornerShape(10.dp))
             ) {
-                Text("Create")
+                Button(
+                    onClick = {
+                        val newEvent = startTime?.let {
+                            endTime?.let { it1 ->
+                                Event(
+                                    System.currentTimeMillis(),
+                                    eventTitle,
+                                    eventDescriptor,
+                                    selectedCalenderData,
+                                    checked,
+                                    it,
+                                    it1
+                                )
+                            }
+                        }
+                        if (newEvent != null) {
+                            onCreate(newEvent)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent, contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        text = "Create Event",
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(8.dp),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
     )
 
 }
