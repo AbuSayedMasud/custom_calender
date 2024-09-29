@@ -689,9 +689,14 @@ fun CreateEventDialog(onCreate: (Event) -> Unit, onDismiss: () -> Unit) {
                             border = BorderStroke(1.dp, Color(0xffb5b5b5))
                         ) {
                             Row(
-                                modifier = Modifier.padding(
-                                    start = 14.dp, top = 16.dp, bottom = 16.dp, end = 10.dp
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 14.dp, top = 16.dp, bottom = 16.dp, end = 10.dp
+                                    )
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                    ) { showStartTimePicker = true },
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -730,9 +735,14 @@ fun CreateEventDialog(onCreate: (Event) -> Unit, onDismiss: () -> Unit) {
                             border = BorderStroke(1.dp, Color(0xffb5b5b5))
                         ) {
                             Row(
-                                modifier = Modifier.padding(
-                                    start = 14.dp, top = 16.dp, bottom = 16.dp, end = 10.dp
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 14.dp, top = 16.dp, bottom = 16.dp, end = 10.dp
+                                    )
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                    ) { showEndTimePicker = true },
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
