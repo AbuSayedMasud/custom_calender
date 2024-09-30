@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
@@ -39,6 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -124,34 +126,35 @@ class MainActivity : ComponentActivity() {
                 }, onDismiss = { showDialog = false })
             }
             DemoCalenderTheme {
-                Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
-                    TopAppBar(colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        actionIconContentColor = Color.Black,
-                        navigationIconContentColor = Color.Black,
-                        scrolledContainerColor = Color.White,
-                        titleContentColor = Color.Black
-                    ), title = {
-                        Text(
-                            "Celender",
-                            color = Color.Black,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }, actions = {
-                        IconButton(onClick = { showDialog = true }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.baseline_addchart_24),
-                                contentDescription = "Back",
-                                tint = Color(0xff2c87d9)
+                Scaffold(modifier = Modifier.fillMaxSize(), containerColor = Color.White,
+                    topBar = {
+                        TopAppBar(colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.White,
+                            actionIconContentColor = Color.Black,
+                            navigationIconContentColor = Color.Black,
+                            scrolledContainerColor = Color.White,
+                            titleContentColor = Color.Black
+                        ), title = {
+                            Text(
+                                "Celender",
+                                color = Color.Black,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                        }
-                    }, navigationIcon = {
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                        }
-                    })
-                }) {
+                        }, actions = {
+                            IconButton(onClick = { showDialog = true }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_addchart_24),
+                                    contentDescription = "Back",
+                                    tint = Color(0xff2c87d9)
+                                )
+                            }
+                        }, navigationIcon = {
+                            IconButton(onClick = { }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            }
+                        })
+                    }) {
                     CalendarWithEvents(events = sampleEvents)
                 }
             }
@@ -190,13 +193,17 @@ fun CalendarWithEvents(events: MutableList<Event>) {
                 CalendarImage(month)
                 // Calendar controls
                 CalendarControls(pagerState, month, selectedDateEvents)
-
                 // Display the names of the days of the week
                 DayNames()
-
                 // Calendar grid with events
                 CalendarGrid(events, month, selectedDateEvents)
-
+                Divider(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .padding(top = 10.dp)
+                        .height(2.dp)
+                        .align(Alignment.CenterHorizontally)
+                )
                 // Display events for selected date at the bottom
                 EventList(selectedDateEvents.value)
             }
@@ -245,13 +252,33 @@ fun CalendarImage(calendar: Calendar) {
     Row(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 50.dp)
     ) {
-        Image(
-            painter = painterResource(id = monthImage),
-            contentDescription = "Month Image",
-            contentScale = ContentScale.Crop
-        )
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clickable { },
+            shape = RoundedCornerShape(8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+
+                Image(
+                    painter = painterResource(id = monthImage),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop, // Image will cover the entire card
+                    modifier = Modifier.fillMaxSize(),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                )
+            }
+        }
     }
 }
 
@@ -268,18 +295,24 @@ fun CalendarControls(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        IconButton(onClick = {
-            // Move to the previous month
-            selectedDateEvents.value = emptyList()
-            coroutineScope.launch {
-                pagerState.animateScrollToPage(pagerState.currentPage - 1)
-            }
-        }) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Previous Month")
-        }
 
+    ) {
+        Surface(
+            shadowElevation = 2.dp,
+            color = Color.White,
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.padding(10.dp)
+        ) {
+            IconButton(onClick = {
+                // Move to the previous month
+                selectedDateEvents.value = emptyList()
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                }
+            }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Previous Month")
+            }
+        }
         // Display current month and year dynamically
         Text(
             text = "${
@@ -289,15 +322,21 @@ fun CalendarControls(
             } ${month.get(Calendar.YEAR)}",
             style = MaterialTheme.typography.bodySmall,
         )
-
-        IconButton(onClick = {
-            // Move to the next month
-            selectedDateEvents.value = emptyList()
-            coroutineScope.launch {
-                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+        Surface(
+            shadowElevation = 2.dp,
+            color = Color.White,
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.padding(10.dp)
+        ) {
+            IconButton(onClick = {
+                // Move to the next month
+                selectedDateEvents.value = emptyList()
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                }
+            }) {
+                Icon(Icons.Default.ArrowForward, contentDescription = "Next Month")
             }
-        }) {
-            Icon(Icons.Default.ArrowForward, contentDescription = "Next Month")
         }
     }
 }
@@ -370,14 +409,68 @@ fun CalendarGrid(
 
 @Composable
 fun EventList(events: List<Event>) {
-    Column(
+    LazyColumn(
         modifier = Modifier
-            .padding(top = 16.dp)
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 32.dp)
     ) {
-        events.forEach { event ->
-            Text(text = event.title)
+        items(events.size) { item ->
+            val event = events[item]
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                val dateFormat = SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault())
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.weight(4f)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.oval),
+                            contentDescription = "oval",
+                            modifier = Modifier.size(10.dp),
+                            tint = Color(0xff237dcd)
+                        )
+                        Text(
+                            text = "${dateFormat.format(event.date)}  ${event.startTime} - ${event.endTime}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0xff8F9BB3),
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                    Text(
+                        text = event.title,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = event.description,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xff8F9BB3)
+                    )
+
+                }
+                Column(
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_more_horiz_24),
+                        contentDescription = "3dot",
+                        modifier = Modifier.size(25.dp),
+                        tint = Color(0xff707070)
+                    )
+                }
+            }
         }
     }
 }
